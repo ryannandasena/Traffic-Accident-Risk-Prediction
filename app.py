@@ -10,20 +10,16 @@ import gc
 # Initialize App
 app = Flask(__name__)
 
-# --- CUSTOM LOGGER (Crucial for Render) ---
-# This forces print statements to show up immediately in the Render logs
 def log(msg):
     print(msg, file=sys.stdout)
     sys.stdout.flush()
 
-log("🚀 STARTING APP SYSTEM...")
+log("STARTING APP SYSTEM...")
 
-# --- LOAD MODELS GLOBALLY ---
-# We load these outside the function so they stay in memory (faster)
 try:
-    log("🔄 Loading Keras Model...")
+    log("Loading Keras Model...")
     
-    # robust check for filename variations
+    # Robust check for filename variations
     if os.path.exists('accident_model.keras'):
         model_path = 'accident_model.keras'
     elif os.path.exists('Accident Model.keras'):
@@ -32,18 +28,17 @@ try:
         raise FileNotFoundError("Could not find 'accident_model.keras' or 'Accident Model.keras'")
         
     model = tf.keras.models.load_model(model_path)
-    log(f"✅ Model loaded from: {model_path}")
+    log(f"Model loaded from: {model_path}")
 
-    log("🔄 Loading Preprocessor...")
+    log("Loading Preprocessor...")
     if not os.path.exists('preprocessor.pkl'):
         raise FileNotFoundError("Could not find 'preprocessor.pkl'")
         
     preprocessor = joblib.load('preprocessor.pkl')
-    log("✅ Preprocessor loaded.")
+    log("Preprocessor loaded.")
 
 except Exception as e:
-    log(f"❌ CRITICAL LOAD ERROR: {e}")
-    # We do NOT stop the app here, so you can see the error on the website if it fails
+    log(f"CRITICAL LOAD ERROR: {e}")
 
 # Show the Website
 @app.route('/')
@@ -56,7 +51,7 @@ def predict():
     gc.collect()
     log("📥 REQUEST RECEIVED: Starting prediction process...")
     try:
-        # 1. Get data
+        # Get data
         input_data = {
             'speed_limit': float(request.form['speed_limit']),
             'num_lanes': int(request.form['num_lanes']),
@@ -66,52 +61,53 @@ def predict():
             'lighting': request.form['lighting'],
             'road_type': request.form['road_type'],
             'time_of_day': request.form['time_of_day'],
-            # Handle checkboxes (if unchecked, they don't send data, so we default to 0)
+
             'road_signs_present': int(request.form.get('road_signs_present', 0)),
             'public_road': int(request.form.get('public_road', 0)),
             'holiday': int(request.form.get('holiday', 0)),
             'school_season': int(request.form.get('school_season', 0))
         }
-        log("📊 Data extracted from form.")
+        log("Data extracted from form.")
 
-        # 2. DataFrame
+        # DataFrame
         features_df = pd.DataFrame([input_data])
-        log("📋 DataFrame created.")
+        log("DataFrame created.")
 
-        # 3. Preprocess
-        log("⚙️ Scaling data (using preprocessor)...")
+        # Preprocess
+        log("Scaling data (using preprocessor)...")
         if 'preprocessor' not in globals():
             raise Exception("Preprocessor was not loaded properly at startup.")
             
         processed_features = preprocessor.transform(features_df)
-        log("⚙️ Data scaled successfully.")
+        log("Data scaled successfully.")
 
-        # 4. Predict
-        log("🧠 Sending to Neural Network...")
+        # Predict
+        log("Sending to Neural Network...")
         if 'model' not in globals():
             raise Exception("Model was not loaded properly at startup.")
 
         prediction = model.predict(processed_features)
         risk_score = prediction[0][0]
-        log(f"✅ Prediction Result: {risk_score}")
+        log(f"Prediction Result: {risk_score}")
 
-        percentage = round(risk_score * 100, 2)
+
+        percentage = "{:.2f}".format(risk_score * 100)
         
         # Determine Status
         if risk_score > 0.7:
-            result_text = f"⚠️ DANGER: High Accident Risk ({percentage}%)"
+            result_text = f"DANGER: High Accident Risk ({percentage}%)"
         elif risk_score > 0.4:
-            result_text = f"⚠️ CAUTION: Moderate Risk ({percentage}%)"
+            result_text = f"CAUTION: Moderate Risk ({percentage}%)"
         else:
-            result_text = f"✅ SAFE: Low Accident Risk ({percentage}%)"
+            result_text = f"SAFE: Low Accident Risk ({percentage}%)"
 
-        log(f"📤 Returning: {result_text}")
+        log(f"Returning: {result_text}")
         return render_template('index.html', prediction_text=result_text)
 
     except Exception as e:
-        log(f"❌ ERROR DURING PREDICTION: {e}")
-        # Return the error to the screen so you know what happened
+        log(f"ERROR DURING PREDICTION: {e}")
         return render_template('index.html', prediction_text=f"System Error: {str(e)}")
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5001)
+
+    app.run(debug=True, port=7860)
