@@ -1,0 +1,14 @@
+# Python System Files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environment (If you have one)
+venv/
+env/
+.env
+
+# IDE Settings
+.vscode/
+.idea/
+
