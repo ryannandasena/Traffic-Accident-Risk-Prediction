@@ -5,6 +5,7 @@ import joblib
 import tensorflow as tf
 import os
 import sys
+import gc
 
 # Initialize App
 app = Flask(__name__)
@@ -52,6 +53,7 @@ def home():
 # Handle the Form
 @app.route('/predict', methods=['POST'])
 def predict():
+    gc.collect()
     log("📥 REQUEST RECEIVED: Starting prediction process...")
     try:
         # 1. Get data
